@@ -21,16 +21,23 @@ def entry_maker(data):
                 row[item[0]] = item[entry-1]
         table_writer(row)
 
+#Get initial page html
 r=requests.get("http://www.d20srd.org/indexes/monsters.htm")
 c=r.content
 soup=BeautifulSoup(c, "html.parser")
 
+# Create a list of monsters to iterate through
 monsters_list=soup.find_all("ul",{"class": "column"})
+
+# Why is the index set to 0? Are there other indices to use, 
+# or is it to restrict results to the first column for testing?
 monsters = monsters_list[0].find_all("a")
 monster_urls = []
 for monster in monsters:
+    # Add standard monster listings to the list of names
     if monster['href'].find("#") == -1:
         monster_urls.append(monster['href'])
+    # and skip and subdivided ones: we'll handle these later
     else:
         pass
 
@@ -68,24 +75,27 @@ for each in monster_urls:
             true_name = title[i]
             i += 1
             
-        
+        # Creates an indicator for whether a table has one or more entries
         multi_table = False   
         block_rows = item.find_all('tr')
         
         first_row = block_rows[0].text.strip().split("\n")
         second_row = block_rows[1].text.strip().split("\n")
         
+        # Checks whether the table has one or more entries based on a coldHead row, which will be shorter than the standard rows.
         if len(first_row) != len(second_row):
             first_row.insert(0, "Name:")
             block_rows[0] = first_row
             multi_table = True
         
+        # Adds in the name of the monster in the beginning for single member tables
         if first_row[0] == 'Size/Type:':
             block_rows.insert(0,["Name:", true_name])
 
+        # Extracts rows from the stats table for each monster page
+        # Tables with multiple entries are broken down later.
         stat_table_raw = []
         for item in block_rows:          
-
             try:
                 stat_row = item.text.strip().split("\n")
             except AttributeError:
