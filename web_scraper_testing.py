@@ -9,6 +9,7 @@ def table_writer(data):
     print(data)
     pass
 
+
 def entry_maker(data):
     # Generate a dict for each entry
     for entry in range(1, len(data[0])):
@@ -21,6 +22,21 @@ def entry_maker(data):
                 row[item[0]] = item[entry-1]
         table_writer(row)
 
+
+def get_titles(data):
+    # This pulls out names for monsters that have variations on the same page
+    # each with its own stat block
+    titles = data.find_all("h2")
+
+    title = []
+    
+    for item in titles:
+        if item.text == "Combat":
+            pass
+        else:
+            title.append(item.text)
+    return title
+
 #Get initial page html
 r=requests.get("http://www.d20srd.org/indexes/monsters.htm")
 c=r.content
@@ -32,6 +48,7 @@ monsters_list=soup.find_all("ul",{"class": "column"})
 # Why is the index set to 0? Are there other indices to use, 
 # or is it to restrict results to the first column for testing?
 monsters = monsters_list[0].find_all("a")
+
 monster_urls = []
 for monster in monsters:
     # Add standard monster listings to the list of names
@@ -47,21 +64,10 @@ for each in monster_urls:
         c = m_data.content
         soup=BeautifulSoup(c, "html.parser")
         monster_name = soup.find_all("h1")[0].text
-        print(monster_name)
 
-    # This pulls out names for monsters that have variations on the same page
-    # each with its own stat block
-    titles = soup.find_all("h2")
+    title = get_titles(soup)
 
-    title = []
-    formatted_head_row = []
-    for item in titles:
-        if item.text == "Combat":
-            combat_info = item.text
-        else:
-            title.append(item.text)
-
-    # Get all tables with the statBlock class
+    # Get a list of all tables with the statBlock class
     block = soup.find_all("table", {"class": "statBlock"})
     
     i = 0
@@ -72,21 +78,21 @@ for each in monster_urls:
         elif len(title) < 2:
             true_name = monster_name
         else:
+            # This code doesn't handle dragons - their page layout is unique
+            # Consider separate function to handle these 
+            #TODO
             true_name = title[i]
             i += 1
-            
-        # Creates an indicator for whether a table has one or more entries
-        multi_table = False   
+
+        # Get a list of rows from the stat table   
         block_rows = item.find_all('tr')
         
         first_row = block_rows[0].text.strip().split("\n")
-        second_row = block_rows[1].text.strip().split("\n")
         
         # Checks whether the table has one or more entries based on a coldHead row, which will be shorter than the standard rows.
-        if len(first_row) != len(second_row):
+        if len(first_row) != len(block_rows[1].text.strip().split("\n")):
             first_row.insert(0, "Name:")
             block_rows[0] = first_row
-            multi_table = True
         
         # Adds in the name of the monster in the beginning for single member tables
         if first_row[0] == 'Size/Type:':
